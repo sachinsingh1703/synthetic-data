@@ -1,0 +1,53 @@
+[2025-10-28T11:40:43.168+0000] {local_task_job_runner.py:120} INFO - ::group::Pre task execution logs
+[2025-10-28T11:40:43.246+0000] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: ai_data_generator_1M.generate_and_save_batch manual__2025-10-28T11:40:24.487926+00:00 map_index=71 [queued]>
+[2025-10-28T11:40:43.272+0000] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: ai_data_generator_1M.generate_and_save_batch manual__2025-10-28T11:40:24.487926+00:00 map_index=71 [queued]>
+[2025-10-28T11:40:43.272+0000] {taskinstance.py:2306} INFO - Starting attempt 1 of 1
+[2025-10-28T11:40:43.290+0000] {taskinstance.py:2330} INFO - Executing <Mapped(_PythonDecoratedOperator): generate_and_save_batch> on 2025-10-28 11:40:24.487926+00:00
+[2025-10-28T11:40:43.307+0000] {standard_task_runner.py:63} INFO - Started process 606 to run task
+[2025-10-28T11:40:43.319+0000] {standard_task_runner.py:90} INFO - Running: ['***', 'tasks', 'run', 'ai_data_generator_1M', 'generate_and_save_batch', 'manual__2025-10-28T11:40:24.487926+00:00', '--job-id', '289', '--raw', '--subdir', 'DAGS_FOLDER/generate_1m_users_dag.py', '--cfg-path', '/tmp/tmpm2zchguv', '--map-index', '71']
+[2025-10-28T11:40:43.321+0000] {standard_task_runner.py:91} INFO - Job 289: Subtask generate_and_save_batch
+[2025-10-28T11:40:43.447+0000] {task_command.py:426} INFO - Running <TaskInstance: ai_data_generator_1M.generate_and_save_batch manual__2025-10-28T11:40:24.487926+00:00 map_index=71 [running]> on host 7c3ad5650a95
+[2025-10-28T11:40:43.651+0000] {taskinstance.py:2648} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='ai_data_generator_1M' AIRFLOW_CTX_TASK_ID='generate_and_save_batch' AIRFLOW_CTX_EXECUTION_DATE='2025-10-28T11:40:24.487926+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='manual__2025-10-28T11:40:24.487926+00:00'
+[2025-10-28T11:40:43.654+0000] {taskinstance.py:430} INFO - ::endgroup::
+[2025-10-28T11:40:43.889+0000] {logging_mixin.py:188} INFO - --- Starting batch 71 ---
+[2025-10-28T11:40:43.891+0000] {taskinstance.py:441} INFO - ::group::Post task execution logs
+[2025-10-28T11:40:43.892+0000] {taskinstance.py:2905} ERROR - Task failed with exception
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.11/site-packages/airflow/models/taskinstance.py", line 465, in _execute_task
+    result = _execute_callable(context=context, **execute_callable_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.11/site-packages/airflow/models/taskinstance.py", line 432, in _execute_callable
+    return execute_callable(context=context, **execute_callable_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.11/site-packages/airflow/models/baseoperator.py", line 401, in wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.11/site-packages/airflow/decorators/base.py", line 265, in execute
+    return_value = super().execute(context)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.11/site-packages/airflow/models/baseoperator.py", line 401, in wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.11/site-packages/airflow/operators/python.py", line 235, in execute
+    return_value = self.execute_callable()
+                   ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.11/site-packages/airflow/operators/python.py", line 252, in execute_callable
+    return self.python_callable(*self.op_args, **self.op_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/airflow/dags/generate_1m_users_dag.py", line 55, in generate_and_save_batch
+    data = [generate_data() for _ in range(ROWS_PER_BATCH)]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/airflow/dags/generate_1m_users_dag.py", line 55, in <listcomp>
+    data = [generate_data() for _ in range(ROWS_PER_BATCH)]
+            ^^^^^^^^^^^^^^^
+  File "/opt/airflow/dags/utils/generator.py", line 17, in generate_data
+    "product_name": fake.commerce_product_name(),
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.11/site-packages/faker/proxy.py", line 130, in __getattr__
+    return getattr(self._factories[0], attr)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Generator' object has no attribute 'commerce_product_name'
+[2025-10-28T11:40:43.944+0000] {taskinstance.py:1206} INFO - Marking task as FAILED. dag_id=ai_data_generator_1M, task_id=generate_and_save_batch, run_id=manual__2025-10-28T11:40:24.487926+00:00, map_index=71, execution_date=20251028T114024, start_date=20251028T114043, end_date=20251028T114043
+[2025-10-28T11:40:43.966+0000] {standard_task_runner.py:110} ERROR - Failed to execute job 289 for task generate_and_save_batch ('Generator' object has no attribute 'commerce_product_name'; 606)
+[2025-10-28T11:40:44.023+0000] {local_task_job_runner.py:240} INFO - Task exited with return code 1
+[2025-10-28T11:40:44.038+0000] {local_task_job_runner.py:222} INFO - ::endgroup::

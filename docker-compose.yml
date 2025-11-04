@@ -1,0 +1,111 @@
+version: '3.8'
+
+x-airflow-common:
+  &airflow-common
+  # Use the official Airflow image for all services
+  image: apache/airflow:2.9.2-python3.11
+  env_file: ./.env
+  environment:
+    - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+    - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+    - AIRFLOW__CORE__LOAD_EXAMPLES=false
+    - AIRFLOW__API__AUTH_BACKENDS=airflow.api.auth.backend.basic_auth
+    - GEMINI_API_KEY=${GEMINI_API_KEY}
+    - AIRFLOW_API_URL=http://airflow-webserver:8080/api/v1
+    - AIRFLOW_USER=airflow
+    - AIRFLOW_PASS=airflow
+  volumes:
+    # Mount all project files
+    - ./dags:/opt/airflow/dags:rw
+    - ./logs:/opt/airflow/logs:rw
+    - ./plugins:/opt/airflow/plugins:rw
+    - ./scripts:/opt/airflow/scripts:ro
+    - ./data:/opt/airflow/data:rw              # Changed to bind mount
+    - ./app2.py:/opt/airflow/app2.py:ro           # Mount Streamlit app
+    - ./requirements.txt:/opt/airflow/requirements.txt:ro # Mount requirements
+  user: "${AIRFLOW_UID:-50000}:0"
+  depends_on:
+    - postgres
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+    volumes:
+      - airflow-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  airflow-init:
+    <<: *airflow-common
+    container_name: airflow-init
+    user: root # Run as root to set permissions
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        # Create directories and set permissions
+        mkdir -p /opt/airflow/data /opt/airflow/logs /opt/airflow/plugins
+        # Set ownership for all mounted volumes so the 'airflow' user can write
+        chown -R "50000:0" /opt/airflow/data /opt/airflow/logs /opt/airflow/plugins /opt/airflow/dags
+        # Init the database as the airflow user
+        exec su airflow -c "airflow db init && airflow users create --username airflow --password airflow --firstname Anonymous --lastname User --role Admin --email admin@example.com"
+
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: airflow-webserver
+    # Install requirements, then run webserver
+    command: >
+      bash -c "pip install --no-cache-dir -r /opt/airflow/requirements.txt && airflow webserver"
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 30s
+      retries: 5
+    restart: always
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: airflow-scheduler
+    # Install requirements, then run scheduler
+    command: >
+      bash -c "pip install --no-cache-dir -r /opt/airflow/requirements.txt && airflow scheduler"
+    healthcheck:
+      test: ["CMD-SHELL", "airflow jobs check --job-type SchedulerJob --hostname \"$(hostname)\""]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    restart: always
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+  # --- OUR INTEGRATED STREAMLIT UI SERVICE ---
+  streamlit-ui:
+    <<: *airflow-common # Inherit the same image, env, user, and volumes
+    container_name: streamlit-ui
+    # Install requirements, then run streamlit
+    command: >
+      bash -c "pip install --no-cache-dir -r /opt/airflow/requirements.txt && streamlit run /opt/airflow/app2.py --server.port 8501 --server.address 0.0.0.0"
+    ports:
+      - "8501:8501" # Access the UI at http://localhost:8501
+    depends_on:
+      airflow-webserver:
+        condition: service_healthy # Wait for Airflow UI to be ready
+    restart: always
+
+volumes:
+  airflow-db:
+  # 'pipeline-data' is no longer needed as we use the './data' bind mount

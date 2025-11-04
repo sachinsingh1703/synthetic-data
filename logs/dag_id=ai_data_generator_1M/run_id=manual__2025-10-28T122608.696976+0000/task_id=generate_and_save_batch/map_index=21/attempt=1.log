@@ -1,0 +1,19 @@
+[2025-10-28T12:26:17.358+0000] {local_task_job_runner.py:120} INFO - ::group::Pre task execution logs
+[2025-10-28T12:26:17.405+0000] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: ai_data_generator_1M.generate_and_save_batch manual__2025-10-28T12:26:08.696976+00:00 map_index=21 [queued]>
+[2025-10-28T12:26:17.418+0000] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: ai_data_generator_1M.generate_and_save_batch manual__2025-10-28T12:26:08.696976+00:00 map_index=21 [queued]>
+[2025-10-28T12:26:17.420+0000] {taskinstance.py:2306} INFO - Starting attempt 1 of 1
+[2025-10-28T12:26:17.436+0000] {taskinstance.py:2330} INFO - Executing <Mapped(_PythonDecoratedOperator): generate_and_save_batch> on 2025-10-28 12:26:08.696976+00:00
+[2025-10-28T12:26:17.450+0000] {standard_task_runner.py:63} INFO - Started process 1327 to run task
+[2025-10-28T12:26:17.454+0000] {standard_task_runner.py:90} INFO - Running: ['***', 'tasks', 'run', 'ai_data_generator_1M', 'generate_and_save_batch', 'manual__2025-10-28T12:26:08.696976+00:00', '--job-id', '747', '--raw', '--subdir', 'DAGS_FOLDER/generate_1m_users_dag.py', '--cfg-path', '/tmp/tmp70_k8yd0', '--map-index', '21']
+[2025-10-28T12:26:17.456+0000] {standard_task_runner.py:91} INFO - Job 747: Subtask generate_and_save_batch
+[2025-10-28T12:26:17.546+0000] {task_command.py:426} INFO - Running <TaskInstance: ai_data_generator_1M.generate_and_save_batch manual__2025-10-28T12:26:08.696976+00:00 map_index=21 [running]> on host 6d06606b435f
+[2025-10-28T12:26:17.735+0000] {taskinstance.py:2648} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='ai_data_generator_1M' AIRFLOW_CTX_TASK_ID='generate_and_save_batch' AIRFLOW_CTX_EXECUTION_DATE='2025-10-28T12:26:08.696976+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='manual__2025-10-28T12:26:08.696976+00:00'
+[2025-10-28T12:26:17.740+0000] {taskinstance.py:430} INFO - ::endgroup::
+[2025-10-28T12:26:17.975+0000] {logging_mixin.py:188} INFO - --- Starting batch 21 ---
+[2025-10-28T12:26:20.667+0000] {logging_mixin.py:188} INFO - --- Finished batch 21, saved to /opt/***/data/generated_users/user_batch_021.parquet ---
+[2025-10-28T12:26:20.672+0000] {python.py:237} INFO - Done. Returned value was: /opt/***/data/generated_users/user_batch_021.parquet
+[2025-10-28T12:26:20.676+0000] {taskinstance.py:441} INFO - ::group::Post task execution logs
+[2025-10-28T12:26:20.746+0000] {taskinstance.py:1206} INFO - Marking task as SUCCESS. dag_id=ai_data_generator_1M, task_id=generate_and_save_batch, run_id=manual__2025-10-28T12:26:08.696976+00:00, map_index=21, execution_date=20251028T122608, start_date=20251028T122617, end_date=20251028T122620
+[2025-10-28T12:26:20.832+0000] {local_task_job_runner.py:240} INFO - Task exited with return code 0
+[2025-10-28T12:26:20.896+0000] {taskinstance.py:3503} INFO - 0 downstream tasks scheduled from follow-on schedule check
+[2025-10-28T12:26:20.908+0000] {local_task_job_runner.py:222} INFO - ::endgroup::

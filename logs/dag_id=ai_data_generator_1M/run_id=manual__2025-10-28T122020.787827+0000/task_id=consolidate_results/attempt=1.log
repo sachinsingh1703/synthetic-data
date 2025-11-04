@@ -1,0 +1,18 @@
+[2025-10-28T12:21:03.073+0000] {local_task_job_runner.py:120} INFO - ::group::Pre task execution logs
+[2025-10-28T12:21:03.108+0000] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: ai_data_generator_1M.consolidate_results manual__2025-10-28T12:20:20.787827+00:00 [queued]>
+[2025-10-28T12:21:03.120+0000] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: ai_data_generator_1M.consolidate_results manual__2025-10-28T12:20:20.787827+00:00 [queued]>
+[2025-10-28T12:21:03.121+0000] {taskinstance.py:2306} INFO - Starting attempt 1 of 1
+[2025-10-28T12:21:03.129+0000] {taskinstance.py:2330} INFO - Executing <Task(_PythonDecoratedOperator): consolidate_results> on 2025-10-28 12:20:20.787827+00:00
+[2025-10-28T12:21:03.137+0000] {standard_task_runner.py:63} INFO - Started process 903 to run task
+[2025-10-28T12:21:03.139+0000] {standard_task_runner.py:90} INFO - Running: ['***', 'tasks', 'run', 'ai_data_generator_1M', 'consolidate_results', 'manual__2025-10-28T12:20:20.787827+00:00', '--job-id', '724', '--raw', '--subdir', 'DAGS_FOLDER/generate_1m_users_dag.py', '--cfg-path', '/tmp/tmpdtslryh5']
+[2025-10-28T12:21:03.140+0000] {standard_task_runner.py:91} INFO - Job 724: Subtask consolidate_results
+[2025-10-28T12:21:03.196+0000] {task_command.py:426} INFO - Running <TaskInstance: ai_data_generator_1M.consolidate_results manual__2025-10-28T12:20:20.787827+00:00 [running]> on host 6d06606b435f
+[2025-10-28T12:21:03.283+0000] {taskinstance.py:2648} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='ai_data_generator_1M' AIRFLOW_CTX_TASK_ID='consolidate_results' AIRFLOW_CTX_EXECUTION_DATE='2025-10-28T12:20:20.787827+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='manual__2025-10-28T12:20:20.787827+00:00'
+[2025-10-28T12:21:03.284+0000] {taskinstance.py:430} INFO - ::endgroup::
+[2025-10-28T12:21:03.285+0000] {logging_mixin.py:188} INFO - Successfully generated 100 batches.
+[2025-10-28T12:21:03.285+0000] {python.py:237} INFO - Done. Returned value was: None
+[2025-10-28T12:21:03.286+0000] {taskinstance.py:441} INFO - ::group::Post task execution logs
+[2025-10-28T12:21:03.294+0000] {taskinstance.py:1206} INFO - Marking task as SUCCESS. dag_id=ai_data_generator_1M, task_id=consolidate_results, run_id=manual__2025-10-28T12:20:20.787827+00:00, execution_date=20251028T122020, start_date=20251028T122103, end_date=20251028T122103
+[2025-10-28T12:21:03.312+0000] {local_task_job_runner.py:240} INFO - Task exited with return code 0
+[2025-10-28T12:21:03.328+0000] {taskinstance.py:3503} INFO - 0 downstream tasks scheduled from follow-on schedule check
+[2025-10-28T12:21:03.329+0000] {local_task_job_runner.py:222} INFO - ::endgroup::

@@ -1,0 +1,22 @@
+[2025-10-28T07:16:46.796+0000] {local_task_job_runner.py:120} INFO - ::group::Pre task execution logs
+[2025-10-28T07:16:46.857+0000] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: synthetic_data_generator.prepare_batches manual__2025-10-28T07:16:43.691942+00:00 [queued]>
+[2025-10-28T07:16:46.872+0000] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: synthetic_data_generator.prepare_batches manual__2025-10-28T07:16:43.691942+00:00 [queued]>
+[2025-10-28T07:16:46.873+0000] {taskinstance.py:2306} INFO - Starting attempt 1 of 1
+[2025-10-28T07:16:46.893+0000] {taskinstance.py:2330} INFO - Executing <Task(_PythonDecoratedOperator): prepare_batches> on 2025-10-28 07:16:43.691942+00:00
+[2025-10-28T07:16:46.919+0000] {standard_task_runner.py:90} INFO - Running: ['***', 'tasks', 'run', 'synthetic_data_generator', 'prepare_batches', 'manual__2025-10-28T07:16:43.691942+00:00', '--job-id', '82', '--raw', '--subdir', 'DAGS_FOLDER/gemini_data_generation_dag.py', '--cfg-path', '/tmp/tmpwt1v4s3j']
+[2025-10-28T07:16:46.922+0000] {logging_mixin.py:188} WARNING - /home/***/.local/lib/python3.12/site-packages/***/task/task_runner/standard_task_runner.py:61 DeprecationWarning: This process (pid=242) is multi-threaded, use of fork() may lead to deadlocks in the child.
+[2025-10-28T07:16:46.923+0000] {standard_task_runner.py:91} INFO - Job 82: Subtask prepare_batches
+[2025-10-28T07:16:46.923+0000] {standard_task_runner.py:63} INFO - Started process 250 to run task
+[2025-10-28T07:16:47.053+0000] {task_command.py:426} INFO - Running <TaskInstance: synthetic_data_generator.prepare_batches manual__2025-10-28T07:16:43.691942+00:00 [running]> on host c921c3854be1
+[2025-10-28T07:16:47.236+0000] {taskinstance.py:2648} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='synthetic_data_generator' AIRFLOW_CTX_TASK_ID='prepare_batches' AIRFLOW_CTX_EXECUTION_DATE='2025-10-28T07:16:43.691942+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='manual__2025-10-28T07:16:43.691942+00:00'
+[2025-10-28T07:16:47.237+0000] {taskinstance.py:430} INFO - ::endgroup::
+[2025-10-28T07:16:47.241+0000] {logging_mixin.py:188} INFO - Starting Run: manual__2025-10-28T07:16:43.691942+00:00
+[2025-10-28T07:16:47.241+0000] {logging_mixin.py:188} INFO - Total Rows: 500
+[2025-10-28T07:16:47.242+0000] {logging_mixin.py:188} INFO - Batch Size: 500
+[2025-10-28T07:16:47.243+0000] {logging_mixin.py:188} INFO - Number of Batches: 1
+[2025-10-28T07:16:47.243+0000] {python.py:237} INFO - Done. Returned value was: [{'batch_id': 0, 'rows': 500, 'prompt': 'fraud', 'format': 'csv', 'output_path': '/opt/***/data/temp/manual__2025-10-28T07:16:43.691942+00:00/batch_0000.csv', 'run_id': 'manual__2025-10-28T07:16:43.691942+00:00'}]
+[2025-10-28T07:16:47.244+0000] {taskinstance.py:441} INFO - ::group::Post task execution logs
+[2025-10-28T07:16:47.299+0000] {taskinstance.py:1206} INFO - Marking task as SUCCESS. dag_id=synthetic_data_generator, task_id=prepare_batches, run_id=manual__2025-10-28T07:16:43.691942+00:00, execution_date=20251028T071643, start_date=20251028T071646, end_date=20251028T071647
+[2025-10-28T07:16:47.340+0000] {local_task_job_runner.py:240} INFO - Task exited with return code 0
+[2025-10-28T07:16:47.462+0000] {taskinstance.py:3503} INFO - 1 downstream tasks scheduled from follow-on schedule check
+[2025-10-28T07:16:47.465+0000] {local_task_job_runner.py:222} INFO - ::endgroup::
