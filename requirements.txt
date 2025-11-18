@@ -3,3 +3,4 @@ pandas
 faker
 google-generativeai
 pyarrow
+python-dotenv
