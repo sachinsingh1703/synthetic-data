@@ -1,0 +1,16 @@
+# Python virtual environment
+venv/
+
+# Secret keys
+.env
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# Old Airflow/Docker folders (no longer needed)
+logs/
+dags/
+data/
+plugins/
+scripts/

@@ -1,33 +1,46 @@
 import streamlit as st
 import pandas as pd
+import sys 
 import glob
 import os
 import google.generativeai as genai
 import re
-import requests
-from requests.auth import HTTPBasicAuth
 import time
 import json
 import zipfile
 import io
+import importlib  # <-- Added for local execution
+from dotenv import load_dotenv  # <-- ADD THIS LINE
+
+load_dotenv()
 
 # --- Configuration ---
 GENERATOR_FILE_PATH = "dags/utils/database_generator.py"
 DATA_DIR = "data/generated_users"
-DAG_ID = "ai_database_generator"
+# DAG_ID = "ai_database_generator" # <-- No longer needed
 
-# --- NEW: Default placeholder code ---
+# --- NEW: Updated placeholder code for local execution ---
 DEFAULT_GENERATOR_CODE = """# Please define a schema and generate code.
 import os
 print("This is a placeholder. Generate a schema in the UI.")
-os.makedirs("/opt/airflow/data/generated_users", exist_ok=True)
+
+# Define and create the output directory relative to this script
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+OUTPUT_DIR = os.path.join(SCRIPT_DIR, "..", "..", "data", "generated_users")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+def main():
+    print("Placeholder main() function. Generate new code in the UI.")
+    # Create a dummy file to show it works
+    with open(os.path.join(OUTPUT_DIR, "placeholder.txt"), "w") as f:
+        f.write("This is a placeholder.")
+
+if __name__ == "__main__":
+    main()
 """
 
 # --- Airflow API Configuration ---
-AIRFLOW_API_URL = os.environ.get("AIRFLOW_API_URL", "http://airflow-webserver:8080/api/v1")
-AIRFLOW_USER = os.environ.get("AIRFLOW_USER", "airflow")
-AIRFLOW_PASS = os.environ.get("AIRFLOW_PASS", "airflow")
-AIRFLOW_AUTH = HTTPBasicAuth(AIRFLOW_USER, AIRFLOW_PASS)
+# --- All Airflow constants have been removed ---
 
 st.set_page_config(layout="wide", page_title="AI Database Generator")
 st.title("🤖 AI Multi-Table Database Generator")
@@ -42,6 +55,8 @@ def load_generator_code(default=False):
 
 def save_generator_code(code_text):
     try:
+        # Ensure the directory exists
+        os.makedirs(os.path.dirname(GENERATOR_FILE_PATH), exist_ok=True)
         with open(GENERATOR_FILE_PATH, "w") as f:
             f.write(code_text)
         return True
@@ -64,29 +79,33 @@ def clean_python_response(text):
     text = text.replace("```python", "").replace("```", "")
     return text.strip()
 
-def create_zip_archive(parquet_files):
+def create_zip_archive(dataframes_dict):
+    progress_bar = None # Define progress_bar outside the try block
     try:
-        zip_buffer = io.BytesIO()
+        zip_buffer = io.BytesIO()  # <-- FIX 1: Was io.BytesB
+        
         with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_f:
-            total_files = len(parquet_files)
-            progress_bar = st.progress(0, text="Zipping files...")
+            total_files = len(dataframes_dict)
+            # Now progress_bar is defined
+            progress_bar = st.progress(0, text="Zipping files...") 
             
-            for i, file_path in enumerate(parquet_files):
-                df = pd.read_parquet(file_path)
+            for i, (table_name, df) in enumerate(dataframes_dict.items()):
                 csv_data = df.to_csv(index=False)
-                base_name = os.path.basename(file_path)
-                csv_file_name = base_name.replace('.parquet', '.csv')
+                csv_file_name = f"{table_name}.csv"
                 zip_f.writestr(csv_file_name, csv_data)
                 
                 progress_text = f"Zipping {csv_file_name}... ({i+1}/{total_files})"
                 progress_bar.progress((i + 1) / total_files, text=progress_text)
-        
+            
         progress_bar.empty()
         zip_buffer.seek(0)
         return zip_buffer
+        
     except Exception as e:
         st.error(f"Failed to create zip file: {e}")
-        progress_bar.empty()
+        # FIX 2: Check if progress_bar exists before trying to empty it
+        if progress_bar: 
+            progress_bar.empty()
         return None
 
 def cleanup_data_and_reset():
@@ -106,54 +125,21 @@ def cleanup_data_and_reset():
     save_generator_code(DEFAULT_GENERATOR_CODE)
 
     # 3. Reset all Streamlit state variables by DELETING them
-    # We must not SET the 'generation_mode' key, as the widget already exists.
-    # We delete it, and the init block will reset it on the rerun.
-    
-    # Get all keys to delete
     keys_to_delete = [
         'key_counter', 'current_code', 'code_is_saved', 'schema_defined',
-        'num_tables', 'tables', 'dag_run_id', 'monitoring_dag',
-        'zip_data_ready', 'zip_data', 'generation_mode' # Delete this key too
+        'num_tables', 'tables', 'zip_data_ready', 'zip_data', 'generation_mode'
+        # 'dag_run_id', 'monitoring_dag' <-- Removed Airflow keys
     ]
     
     for key in keys_to_delete:
         if key in st.session_state:
             del st.session_state[key]
-        
-    # 4. Rerun the app. The STATE INITIALIZATION block will now
-    #    re-create all the keys with their default values.
+            
+    # 4. Rerun the app.
     st.rerun()
 
 # --- Airflow API Functions ---
-
-def trigger_airflow_dag():
-    url = f"{AIRFLOW_API_URL}/dags/{DAG_ID}/dagRuns"
-    headers = {"Content-Type": "application/json"}
-    body = {"conf": {}}
-    try:
-        response = requests.post(url, auth=AIRFLOW_AUTH, headers=headers, json=body)
-        response.raise_for_status() 
-        data = response.json()
-        dag_run_id = data.get("dag_run_id")
-        st.session_state.dag_run_id = dag_run_id
-        return dag_run_id
-    except requests.exceptions.RequestException as e:
-        st.error(f"Failed to trigger DAG. Is Airflow running? Error: {e}")
-        return None
-
-def get_dag_run_status():
-    if "dag_run_id" not in st.session_state:
-        return None
-    dag_run_id = st.session_state.dag_run_id
-    url = f"{AIRFLOW_API_URL}/dags/{DAG_ID}/dagRuns/{dag_run_id}"
-    try:
-        response = requests.get(url, auth=AIRFLOW_AUTH)
-        response.raise_for_status()
-        data = response.json()
-        return data.get("state") 
-    except requests.exceptions.RequestException as e:
-        st.error(f"Failed to get DAG status: {e}")
-        return "failed" 
+# --- All Airflow API functions (trigger_airflow_dag, get_dag_run_status) have been removed ---
 
 # --- Gemini API Functions ---
 
@@ -225,30 +211,49 @@ def call_gemini_for_code(schema, api_key):
         schema_str = json.dumps(schema, indent=2)
         
         full_prompt = f"""
-        You are an expert Python data engineer. Your task is to write a single Python script to generate a multi-table dataset with specific Primary Key (PK) and Foreign Key (FK) requirements.
-        You will be given a JSON object describing the tables, their relationships, and the number of rows for each.
+        You are an expert Python data engineer. Your task is to write a single Python script.
         
-        YOUR GOAL is to write a Python script with a single `main()` function. This script must:
-        1.  Import necessary libraries: `pandas as pd`, `faker`, `datetime`, `random`, `os`.
-        2.  Define the output directory: `OUTPUT_DIR = "/opt/airflow/data/generated_users"` and ensure it exists.
-        3.  Initialize Faker: `fake = Faker()`.
-        4.  **Generation Order:** Generate tables with fewer rows first ("Dimension").
-        5.  **PATTERNED PRIMARY KEYS:** For columns specified as a Primary Key (PK) (e.g., 'customer_id'), check the user's prompt for that table. 
-            * If the prompt mentions a specific pattern (like 'CUST-XXXX'), generate IDs matching that pattern using Python f-strings (e.g., `f"CUST-{{i:04d}}"` where `i` is the sequence number starting from 1).
-            * If no pattern is mentioned, generate **sequential integers starting from 1**.
-        6.  Store these generated PKs in a list in memory (e.g., `customer_id_list`).
-        7.  Generate tables with many rows last ("Fact").
-        8.  **FOREIGN KEYS:** When generating a Fact table's Foreign Key (FK) column (e.g., 'customer_id' in Sales), you MUST use `random.choice(customer_id_list)` to select a valid PK from the corresponding PK list.
-        9.  **Row Counts:** Generate the exact number of rows specified for each table.
-        10. **Batching:** For large tables (> 100,000 rows), generate data in batches.
-        11. Save each table as a separate `.parquet` file in the `OUTPUT_DIR`.
-        12. Include print statements for progress.
-
-        **CRITICAL FAKER RULES:**
-        * For a **product name**: use `fake.catch_phrase()` or `fake.bs()`.
-        * For **IDs NOT specified as PK/FK**: use `random.randint(1000, 9999)`.
+        **CRITICAL GOAL:** You will write a single Python function named `main()`.
         
-        Respond ONLY with the complete, runnable Python code.
+        * **DO NOT** write any code outside of this function definition (no global imports, no global variables).
+        * The `main()` function MUST be 100% self-contained.
+        
+        **Your Process:**
+        1.  Define the function: `def main():`.
+        2.  **As the very first lines INSIDE `main()`**, you MUST import all required libraries.
+        3.  **Immediately after the imports (still inside `main()`)**, initialize Faker.
+        
+        **Correct Example Structure:**
+        ```python
+        def main():
+            # 1. Imports go INSIDE main()
+            import pandas as pd
+            from faker import Faker
+            import random
+            import datetime
+            
+            # 2. Faker is initialized INSIDE main()
+            fake = Faker()
+            
+            # 3. Rest of your generation logic here...
+            # ...
+            # customer_id_list = [ ... ]
+            # ...
+            
+            # 4. Return the dictionary of DataFrames
+            # df_customers = pd.DataFrame(...)
+            # return {{ "Customers": df_customers }}
+        ```
+        
+        **Function Requirements:**
+        * **RETURN A DICTIONARY** where keys are table names (e.g., "Customers") and values are the generated pandas DataFrames.
+        * **DO NOT** save any files to disk (e.g., no .parquet, .csv).
+        * **DO NOT** define an `OUTPUT_DIR`. All data must be returned in memory.
+        * Generate tables in the correct order of dependency.
+        * Use `random.choice(pk_list)` for Foreign Keys.
+        * Use patterned IDs (e.g., `CUST-XXXX`) if mentioned in the prompt.
+        
+        **Respond ONLY with the complete, runnable Python code, starting with `def main():`.**
 
         ---
         HERE IS THE DATABASE SCHEMA:
@@ -268,7 +273,7 @@ def call_gemini_for_code(schema, api_key):
 
 API_KEY = os.environ.get("GEMINI_API_KEY")
 if not API_KEY:
-    st.error("`GEMINI_API_KEY` not found. Please set it in your `.env` file and restart your containers.")
+    st.error("`GEMINI_API_KEY` not found. Please set it as an environment variable.")
     st.stop()
 
 # --- STATE INITIALIZATION ---
@@ -420,83 +425,83 @@ if st.session_state.schema_defined:
         key=editor_key
     )
 
-    if st.button("💾 Save Code to Airflow", use_container_width=True):
+    if st.button("✅ Lock in Code", use_container_width=True):
         code_to_save = st.session_state[editor_key]
-        save_generator_code(code_to_save)
         st.session_state.current_code = code_to_save
         st.session_state.code_is_saved = True
-        st.success("Code saved to file!")
+        st.success("Code is locked in and ready to run!")
 
     # --- Shared UI: Step 4 (Run Pipeline) ---
     st.markdown("---")
     st.header("4. 🚀 Run Pipeline & Download Data")
 
     if not st.session_state.get("code_is_saved", False):
-        st.warning("Please **Save Code** before starting data generation.")
+        st.warning("Please **Lock in Code** before starting data generation.")
     else:
         if st.button("🚀 Start Database Generation", type="primary", use_container_width=True):
-            if st.session_state.get(editor_key, "") != load_generator_code():
-                 st.warning("Your latest edits are not saved. Please click 'Save Code' first.")
-            else:
-                dag_run_id = trigger_airflow_dag()
-                if dag_run_id:
-                    st.session_state.monitoring_dag = True
-                    st.info(f"Successfully triggered Airflow DAG run: `{dag_run_id}`")
-                else:
-                    st.error("Failed to trigger DAG. Check the Airflow Webserver logs.")
-
-    # Polling logic
-    if st.session_state.get("monitoring_dag", False):
-        with st.spinner("Data generation in progress... This may take several minutes. Polling Airflow every 10 seconds."):
-            status = "running"
-            while status == "running":
-                time.sleep(10) 
-                status = get_dag_run_status()
             
-            if status == "success":
-                st.success("Data generation complete! ✅")
-                st.balloons()
-                st.session_state.monitoring_dag = False
-                st.rerun() 
-                
-            elif status == "failed":
-                st.error(f"DAG run {st.session_state.dag_run_id} failed. Please check the Airflow UI for logs.")
-                st.session_state.monitoring_dag = False
+            with st.spinner("Data generation in progress... This may take several minutes."):
+                try:
+                    # 1. Get the code string from session state
+                    generated_code = st.session_state.current_code
+                    
+                    # 2. Create a scope for the exec function
+                    local_scope = {}
+                    
+                    # 3. Execute the code, which defines the main() function
+                    exec(generated_code, globals(), local_scope)
+                    
+                    # 4. Extract the main() function
+                    main_func = local_scope['main']
+                    
+                    st.toast("--- Starting Database Generation ---")
+                    # 5. Run main() and get the in-memory data
+                    data_dict = main_func() 
+                    st.toast("--- Database Generation Complete ---")
+                    
+                    # 6. Store the resulting data in session state
+                    st.session_state.generated_data = data_dict
+                    
+                    st.success("Data generation complete! ✅")
+                    st.balloons()
+                    st.rerun()
+
+                except Exception as e:
+                    st.error(f"Data generation failed. See details below.")
+                    st.exception(e) # Show full traceback    # --- Polling logic has been removed ---
 
     # --- Shared UI: Step 5 (Download) ---
-    st.subheader("Generated Database Files")
-    st.info(f"Files are saved as Parquet in your project's `{DATA_DIR}` folder.")
+    # --- Shared UI: Step 5 (Download) ---
+    st.subheader("Generated Database Tables")
 
-    parquet_files = sorted(glob.glob(f"{DATA_DIR}/*.parquet"))
-
-    if not parquet_files:
-        st.warning("No data files found. Please run your Airflow DAG first.")
+    if not st.session_state.get("generated_data"):
+        st.warning("No data found. Run the generation pipeline first.")
     else:
-        st.success(f"Found {len(parquet_files)} database tables!")
-        
-        file_names = [os.path.basename(f) for f in parquet_files]
-        selected_file_name = st.selectbox("Select a table to preview:", file_names)
-        
-        if selected_file_name:
+        data_dict = st.session_state.generated_data
+        st.success(f"Found {len(data_dict)} database tables in memory!")
+
+        file_names = list(data_dict.keys())
+        selected_table_name = st.selectbox("Select a table to preview:", file_names)
+
+        if selected_table_name:
             try:
-                selected_file_path = os.path.join(DATA_DIR, selected_file_name)
-                sample_df = pd.read_parquet(selected_file_path)
+                sample_df = data_dict[selected_table_name]
                 st.dataframe(sample_df.head(100), hide_index=True)
-                
+
                 total_rows = len(sample_df)
-                st.metric(label=f"Total Rows in {selected_file_name}", value=f"{total_rows:,}")
-                
+                st.metric(label=f"Total Rows in {selected_table_name}", value=f"{total_rows:,}")
+
             except Exception as e:
-                st.error(f"Failed to read sample file {selected_file_name}: {e}")
+                st.error(f"Failed to read sample data: {e}")
 
         st.subheader("Download All Tables (.zip)")
         if st.button("📦 Prepare All Tables as .zip", type="primary", use_container_width=True):
-            zip_data = create_zip_archive(parquet_files)
+            zip_data = create_zip_archive(data_dict)
             if zip_data:
                 st.session_state.zip_data_ready = True
                 st.session_state.zip_data = zip_data
                 st.success("Zip file is ready to download!")
-        
+
         if st.session_state.get("zip_data_ready", False):
             col1, col2 = st.columns([3, 1])
             with col1:
@@ -509,4 +514,4 @@ if st.session_state.schema_defined:
                 )
             with col2:
                 if st.button("🧹 Clean Up & Reset", use_container_width=True):
-                    cleanup_data_and_reset()
+                    cleanup_data_and_reset() # This function remains the same
