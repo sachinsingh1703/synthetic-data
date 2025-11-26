@@ -207,11 +207,11 @@ def call_gemini_for_schema(user_prompt, api_key):
 def call_gemini_for_code(schema, api_key):
     try:
         genai.configure(api_key=api_key)
-        # Use the model you prefer (gemini-2.5-pro, gemini-1.5-pro, etc.)
+        # Use the model you prefer
         model = genai.GenerativeModel('gemini-2.5-pro') 
         schema_str = json.dumps(schema, indent=2)
         
-        # --- PROMPT UPDATED FOR ROBUSTNESS ---
+        # --- PROMPT UPDATED WITH STRICT TYPE SAFETY RULES ---
         full_prompt = f"""
         You are an expert Python data engineer. Your task is to write a single, robust Python script to generate a multi-table dataset.
 
@@ -234,12 +234,13 @@ def call_gemini_for_code(schema, api_key):
             * **Foreign Keys:** When generating a child table, fill the Foreign Key column by using `random.choice(parent_id_list)` to ensure every FK exists in the parent.
             * **Row Counts:** Generate the exact number of rows specified. Since this is a demo, generate all rows in memory (no batching needed for <50k rows).
 
-        5.  **CRITICAL: PREVENT DATA TYPE ERRORS (Strict Types):**
-            * **NEVER mix data types** in a single column construction.
-            * **`numpy.select` / `np.where` Safety:** If you use conditional logic to create a column (e.g., assigning 'Gold' or 'Silver' status), ensure the `default` value matches the data type of the choices.
-                * ❌ *WRONG:* `choices=['A', 'B']; default=0` (Mixes String and Int)
-                * ✅ *CORRECT:* `choices=['A', 'B']; default='Unknown'` (All Strings)
-            * **Dates:** Ensure dates are generated as datetime objects or consistent ISO strings.
+        5.  **CRITICAL: DATA TYPE SAFETY (Stop TypeError):**
+            * **STRICT RULE:** When using `np.select` or `np.where`, the `choicelist` and the `default` value MUST be the exact same data type.
+            * **Never** mix strings and integers in the same column.
+            * ❌ **WRONG:** `choices=['High', 'Low'], default=0` (String vs Int -> CRASH).
+            * ✅ **CORRECT:** `choices=['High', 'Low'], default='0'` (String vs String -> OK).
+            * ✅ **CORRECT:** `choices=['High', 'Low'], default='Unknown'` (String vs String -> OK).
+            * If the column is text, the default MUST be a string (quoted).
 
         6.  **CRITICAL: PREVENT FAKER ERRORS:**
             * Use ONLY standard Faker providers.
