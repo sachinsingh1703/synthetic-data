@@ -207,53 +207,52 @@ def call_gemini_for_schema(user_prompt, api_key):
 def call_gemini_for_code(schema, api_key):
     try:
         genai.configure(api_key=api_key)
+        # Use the model you prefer (gemini-2.5-pro, gemini-1.5-pro, etc.)
         model = genai.GenerativeModel('gemini-2.5-pro') 
         schema_str = json.dumps(schema, indent=2)
         
+        # --- PROMPT UPDATED FOR ROBUSTNESS ---
         full_prompt = f"""
-        You are an expert Python data engineer. Your task is to write a single Python script.
+        You are an expert Python data engineer. Your task is to write a single, robust Python script to generate a multi-table dataset.
+
+        You will be given a JSON object describing the tables, their relationships, and the number of rows for each.
         
-        **CRITICAL GOAL:** You will write a single Python function named `main()`.
+        YOUR GOAL is to write a Python script with a single `main()` function. This script must:
+
+        1.  **IMPORTS:** Import all necessary libraries: `pandas as pd`, `numpy as np`, `faker`, `datetime`, `random`, `os`.
+        2.  **SETUP:** * Define `OUTPUT_DIR = "{DATA_DIR}"`.
+            * Ensure the directory exists: `os.makedirs(OUTPUT_DIR, exist_ok=True)`.
+            * Initialize Faker: `fake = Faker()`.
         
-        * **DO NOT** write any code outside of this function definition (no global imports, no global variables).
-        * The `main()` function MUST be 100% self-contained.
-        
-        **Your Process:**
-        1.  Define the function: `def main():`.
-        2.  **As the very first lines INSIDE `main()`**, you MUST import all required libraries.
-        3.  **Immediately after the imports (still inside `main()`)**, initialize Faker.
-        
-        **Correct Example Structure:**
-        ```python
-        def main():
-            # 1. Imports go INSIDE main()
-            import pandas as pd
-            from faker import Faker
-            import random
-            import datetime
-            
-            # 2. Faker is initialized INSIDE main()
-            fake = Faker()
-            
-            # 3. Rest of your generation logic here...
-            # ...
-            # customer_id_list = [ ... ]
-            # ...
-            
-            # 4. Return the dictionary of DataFrames
-            # df_customers = pd.DataFrame(...)
-            # return {{ "Customers": df_customers }}
-        ```
-        
-        **Function Requirements:**
-        * **RETURN A DICTIONARY** where keys are table names (e.g., "Customers") and values are the generated pandas DataFrames.
-        * **DO NOT** save any files to disk (e.g., no .parquet, .csv).
-        * **DO NOT** define an `OUTPUT_DIR`. All data must be returned in memory.
-        * Generate tables in the correct order of dependency.
-        * Use `random.choice(pk_list)` for Foreign Keys.
-        * Use patterned IDs (e.g., `CUST-XXXX`) if mentioned in the prompt.
-        
-        **Respond ONLY with the complete, runnable Python code, starting with `def main():`.**
+        3.  **DEPENDENCY MANAGEMENT (Topological Sort):**
+            * You MUST generate "Parent" tables (those with no Foreign Keys) first.
+            * You MUST generate "Child" tables (those with Foreign Keys) *after* their parents are created.
+            * **Store IDs:** As you create a parent table, store its Primary Key values in a Python list in memory (e.g., `customer_ids = df['customer_id'].tolist()`). You will need these for the child tables.
+
+        4.  **DATA GENERATION RULES:**
+            * **Patterned IDs:** If the prompt asks for a pattern (e.g., 'CUST-XXXX'), use f-strings (e.g., `f"CUST-{{i:04d}}"`). Otherwise, use sequential integers.
+            * **Foreign Keys:** When generating a child table, fill the Foreign Key column by using `random.choice(parent_id_list)` to ensure every FK exists in the parent.
+            * **Row Counts:** Generate the exact number of rows specified. Since this is a demo, generate all rows in memory (no batching needed for <50k rows).
+
+        5.  **CRITICAL: PREVENT DATA TYPE ERRORS (Strict Types):**
+            * **NEVER mix data types** in a single column construction.
+            * **`numpy.select` / `np.where` Safety:** If you use conditional logic to create a column (e.g., assigning 'Gold' or 'Silver' status), ensure the `default` value matches the data type of the choices.
+                * ❌ *WRONG:* `choices=['A', 'B']; default=0` (Mixes String and Int)
+                * ✅ *CORRECT:* `choices=['A', 'B']; default='Unknown'` (All Strings)
+            * **Dates:** Ensure dates are generated as datetime objects or consistent ISO strings.
+
+        6.  **CRITICAL: PREVENT FAKER ERRORS:**
+            * Use ONLY standard Faker providers.
+            * For "Product Name": Use `fake.catch_phrase()` or `fake.bs()`. Do NOT use `fake.product_name()`.
+            * For "Company": Use `fake.company()`.
+            * For general text: Use `fake.word()` or `fake.sentence()`.
+
+        7.  **OUTPUT:**
+            * Save each table as a `.parquet` file in `OUTPUT_DIR`.
+            * Print status messages (e.g., "Generated Customers...").
+            * The `main()` function should return nothing.
+
+        Respond ONLY with the complete, runnable Python code.
 
         ---
         HERE IS THE DATABASE SCHEMA:
