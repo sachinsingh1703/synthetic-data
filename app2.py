@@ -17,7 +17,7 @@ import sys
 GENERATOR_DIR = "dags/utils"
 GENERATOR_FILE_PATH = f"{GENERATOR_DIR}/database_generator.py"
 DATA_DIR = "generated_data"
-MAX_ROWS_PER_TABLE = 50000 
+MAX_ROWS_PER_TABLE = 1000000 
 
 # --- Default placeholder code ---
 DEFAULT_GENERATOR_CODE = f"""# Please define a schema and generate code.
