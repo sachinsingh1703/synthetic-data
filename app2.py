@@ -245,7 +245,7 @@ mode = st.radio(
 
 # --- Single Prompt UI ---
 if st.session_state.generation_mode == "Single Prompt (AI-Assisted)":
-    st.info("Describe your entire database in one prompt. The AI will generate the schema for you to review. (Row limit: 50,000)")
+    st.info("Describe your entire database in one prompt. The AI will generate the schema for you to review. (Row limit: 1,000,000)")
     single_prompt = st.text_area(
         "Describe your database:",
         height=150,
